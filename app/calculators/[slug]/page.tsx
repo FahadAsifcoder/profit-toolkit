@@ -1,116 +1,173 @@
 'use client';
 
 import { useState, use } from 'react';
+import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
-// --- ALL CALCULATOR DATA ---
+// --- ALL CALCULATOR DATA WITH DETAILED INFO ---
 const CALCULATORS = [
   { 
-    slug: 'profit', title: 'Profit Calculator', description: 'Calculate your exact net profit after all expenses.', icon: '💰', 
-    fields: [{ id: 'revenue', label: 'Total Revenue', placeholder: '100000' }, { id: 'productCost', label: 'Product Cost', placeholder: '40000' }, { id: 'ads', label: 'Advertising Cost', placeholder: '15000' }, { id: 'shipping', label: 'Shipping', placeholder: '5000' }, { id: 'fees', label: 'Platform Fees (%)', placeholder: '3' }],
-    howToUse: 'Enter your total sales revenue, then subtract all costs.', formula: 'Net Profit = Revenue - Total Costs', example: 'Revenue 100k - Costs 60k = 40k Profit.', whenToUse: 'Track your actual profitability.'
+    slug: 'profit', title: 'Profit Calculator', description: 'Calculate your exact net profit after all expenses, ads, and fees.', icon: '💰', 
+    fields: [{ id: 'revenue', label: 'Total Revenue', placeholder: '100000' }, { id: 'productCost', label: 'Product Cost', placeholder: '40000' }, { id: 'ads', label: 'Advertising Cost', placeholder: '15000' }, { id: 'shipping', label: 'Shipping & Packaging', placeholder: '5000' }, { id: 'fees', label: 'Platform Fees (%)', placeholder: '3' }],
+    howToUse: 'Enter your total sales revenue, then subtract all costs including product cost, advertising spend, shipping fees, and platform commission percentages.',
+    formula: 'Net Profit = Revenue - (Product Cost + Ads + Shipping + (Revenue × Fee %))',
+    example: 'If you sell Rs. 100,000 worth of products, with Rs. 40,000 product cost, Rs. 15,000 in ads, Rs. 5,000 shipping, and 3% fees (Rs. 3,000), your net profit is Rs. 37,000.',
+    whenToUse: 'Use this after every sale or monthly to track your actual profitability across all platforms.'
   },
   { 
-    slug: 'roi', title: 'ROI Calculator', description: 'Measure the return on your investment.', icon: '📈', 
-    fields: [{ id: 'investment', label: 'Total Investment', placeholder: '50000' }, { id: 'return', label: 'Total Return', placeholder: '80000' }],
-    howToUse: 'Enter your investment and total return.', formula: 'ROI = ((Return - Investment) / Investment) × 100', example: 'Invest 50k, earn 80k = 60% ROI.', whenToUse: 'Evaluate ad campaigns or investments.'
+    slug: 'roi', title: 'ROI Calculator', description: 'Measure the return on your investment to ensure your business is growing.', icon: '📈', 
+    fields: [{ id: 'investment', label: 'Total Investment', placeholder: '50000' }, { id: 'return', label: 'Total Return (Revenue)', placeholder: '80000' }],
+    howToUse: 'Enter the total amount you invested and the total revenue you generated from that investment.',
+    formula: 'ROI = ((Return - Investment) / Investment) × 100',
+    example: 'Investing Rs. 50,000 and earning Rs. 80,000 gives you Rs. 30,000 profit, which is a 60% ROI.',
+    whenToUse: 'Perfect for evaluating ad campaigns, product launches, or any business investment.'
   },
   { 
-    slug: 'margin', title: 'Margin Calculator', description: 'Find out your exact profit margin percentage.', icon: '📊', 
-    fields: [{ id: 'cost', label: 'Total Cost', placeholder: '40000' }, { id: 'revenue', label: 'Selling Price', placeholder: '100000' }],
-    howToUse: 'Input your cost and selling price.', formula: 'Margin = ((Revenue - Cost) / Revenue) × 100', example: 'Cost 40k, Price 100k = 60% margin.', whenToUse: 'Price your products correctly.'
+    slug: 'margin', title: 'Margin Calculator', description: 'Find out your exact profit margin percentage to price your products correctly.', icon: '📊', 
+    fields: [{ id: 'cost', label: 'Total Cost', placeholder: '40000' }, { id: 'revenue', label: 'Selling Price (Revenue)', placeholder: '100000' }],
+    howToUse: 'Input your total cost to produce/acquire the product and your selling price.',
+    formula: 'Margin = ((Revenue - Cost) / Revenue) × 100',
+    example: 'Cost of Rs. 40,000 and selling price of Rs. 100,000 gives you a 60% profit margin.',
+    whenToUse: 'Use before setting prices to ensure you maintain healthy margins.'
   },
   { 
-    slug: 'roas', title: 'ROAS Calculator', description: 'Calculate Return on Ad Spend.', icon: '🎯', 
+    slug: 'roas', title: 'ROAS Calculator', description: 'Calculate Return on Ad Spend to optimize your ads.', icon: '🎯', 
     fields: [{ id: 'adSpend', label: 'Total Ad Spend', placeholder: '20000' }, { id: 'adRevenue', label: 'Revenue from Ads', placeholder: '100000' }],
-    howToUse: 'Enter ad spend and revenue generated.', formula: 'ROAS = Revenue / Ad Spend', example: 'Spend 20k, earn 100k = 5x ROAS.', whenToUse: 'Optimize your ad campaigns.'
+    howToUse: 'Enter how much you spent on advertising and the revenue generated specifically from those ads.',
+    formula: 'ROAS = Revenue from Ads / Ad Spend',
+    example: 'Spending Rs. 20,000 on ads that generate Rs. 100,000 in sales gives you a ROAS of 5x.',
+    whenToUse: 'Check this weekly for ad campaigns. A ROAS above 4x is excellent.'
   },
   { 
-    slug: 'break-even', title: 'Break Even Calculator', description: 'Know how many units you need to sell to cover costs.', icon: '️', 
-    fields: [{ id: 'fixedCosts', label: 'Fixed Costs', placeholder: '50000' }, { id: 'pricePerUnit', label: 'Price per Unit', placeholder: '2000' }, { id: 'costPerUnit', label: 'Cost per Unit', placeholder: '800' }],
-    howToUse: 'Enter fixed costs, price, and cost per unit.', formula: 'Break-Even = Fixed Costs / (Price - Cost)', example: '50k fixed costs / 1200 margin = 42 units.', whenToUse: 'Understand your minimum sales target.'
+    slug: 'break-even', title: 'Break Even Calculator', description: 'Know exactly how many units you need to sell to cover all your costs.', icon: '⚖️', 
+    fields: [{ id: 'fixedCosts', label: 'Fixed Costs (Monthly)', placeholder: '50000' }, { id: 'pricePerUnit', label: 'Selling Price per Unit', placeholder: '2000' }, { id: 'costPerUnit', label: 'Cost per Unit', placeholder: '800' }],
+    howToUse: 'Enter your monthly fixed costs, selling price per unit, and cost to produce each unit.',
+    formula: 'Break-Even Units = Fixed Costs / (Price per Unit - Cost per Unit)',
+    example: 'With Rs. 50,000 fixed costs, selling at Rs. 2,000 with Rs. 800 cost per unit, you need to sell 42 units.',
+    whenToUse: 'Essential when starting a new product line to understand your minimum sales target.'
   },
   { 
-    slug: 'discount', title: 'Discount Calculator', description: 'Calculate sale prices and discount amounts.', icon: '💸', 
-    fields: [{ id: 'originalPrice', label: 'Original Price', placeholder: '2000' }, { id: 'discountPercent', label: 'Discount (%)', placeholder: '20' }],
-    howToUse: 'Enter original price and discount percentage.', formula: 'Final Price = Price - (Price × Discount%)', example: '2000 with 20% off = 1600.', whenToUse: 'Run sales and promotions.'
+    slug: 'discount', title: 'Discount Calculator', description: 'Calculate sale prices and discount amounts for your promotions.', icon: '💸', 
+    fields: [{ id: 'originalPrice', label: 'Original Price', placeholder: '2000' }, { id: 'discountPercent', label: 'Discount Percentage (%)', placeholder: '20' }],
+    howToUse: 'Enter the original price and the discount percentage you want to offer.',
+    formula: 'Discount Amount = Original Price × (Discount % / 100)',
+    example: 'A Rs. 2,000 product with 20% discount saves customers Rs. 400, making the final price Rs. 1,600.',
+    whenToUse: 'Use during sales events or clearance promotions.'
   },
   { 
-    slug: 'shipping', title: 'Shipping Calculator', description: 'Estimate total shipping costs.', icon: '📦', 
-    fields: [{ id: 'weight', label: 'Weight (kg)', placeholder: '2' }, { id: 'ratePerKg', label: 'Rate per Kg', placeholder: '150' }, { id: 'packaging', label: 'Packaging Cost', placeholder: '50' }],
-    howToUse: 'Enter weight, rate, and packaging cost.', formula: 'Total = (Weight × Rate) + Packaging', example: '2kg at 150/kg + 50 = 350.', whenToUse: 'Calculate shipping before listing products.'
+    slug: 'shipping', title: 'Shipping Cost Calculator', description: 'Estimate your total shipping costs including packaging.', icon: '📦', 
+    fields: [{ id: 'weight', label: 'Package Weight (kg)', placeholder: '2' }, { id: 'ratePerKg', label: 'Rate per Kg', placeholder: '150' }, { id: 'packaging', label: 'Packaging Cost', placeholder: '50' }],
+    howToUse: 'Enter the weight of your package, the courier rate per kg, and your packaging material cost.',
+    formula: 'Total Shipping = (Weight × Rate per Kg) + Packaging Cost',
+    example: 'A 2kg package at Rs. 150/kg with Rs. 50 packaging costs Rs. 350 total to ship.',
+    whenToUse: 'Calculate shipping costs before listing products.'
   },
   { 
-    slug: 'cod', title: 'COD Charges Calculator', description: 'Calculate Cash on Delivery fees.', icon: '💳', 
-    fields: [{ id: 'orderValue', label: 'Order Value', placeholder: '5000' }, { id: 'codPercent', label: 'COD Fee (%)', placeholder: '2' }],
-    howToUse: 'Enter order value and COD fee percentage.', formula: 'COD Fee = Order Value × (Fee% / 100)', example: '5000 order at 2% = 100 fee.', whenToUse: 'Factor COD fees into your pricing.'
+    slug: 'cod', title: 'COD Charges Calculator', description: 'Calculate Cash on Delivery fees charged by courier companies.', icon: '💳', 
+    fields: [{ id: 'orderValue', label: 'Order Value', placeholder: '5000' }, { id: 'codPercent', label: 'COD Fee Percentage (%)', placeholder: '2' }],
+    howToUse: 'Enter the order value and the COD fee percentage charged by your courier.',
+    formula: 'COD Fee = Order Value × (COD % / 100)',
+    example: 'A Rs. 5,000 order with 2% COD fee costs Rs. 100 in extra charges.',
+    whenToUse: 'Factor this into your pricing if you offer COD.'
   },
   { 
-    slug: 'tax', title: 'Tax Calculator', description: 'Calculate sales tax, VAT, or GST.', icon: '💵', 
+    slug: 'tax', title: 'Tax Calculator', description: 'Calculate sales tax, VAT, or GST on your products.', icon: '💵', 
     fields: [{ id: 'amount', label: 'Amount', placeholder: '10000' }, { id: 'taxRate', label: 'Tax Rate (%)', placeholder: '16' }],
-    howToUse: 'Enter base amount and tax rate.', formula: 'Tax = Amount × (Rate / 100)', example: '10000 at 16% = 1600 tax.', whenToUse: 'Invoicing and pricing.'
+    howToUse: 'Enter the base amount and the applicable tax rate.',
+    formula: 'Tax Amount = Amount × (Tax Rate / 100)',
+    example: 'Rs. 10,000 with 16% GST adds Rs. 1,600 tax, making the total Rs. 11,600.',
+    whenToUse: 'Use for invoicing, pricing, or understanding tax liabilities.'
   },
   { 
-    slug: 'cpc', title: 'CPC Calculator', description: 'Calculate Cost Per Click.', icon: '📉', 
+    slug: 'cpc', title: 'CPC Calculator', description: 'Calculate Cost Per Click for your advertising campaigns.', icon: '📉', 
     fields: [{ id: 'totalCost', label: 'Total Ad Cost', placeholder: '5000' }, { id: 'clicks', label: 'Total Clicks', placeholder: '250' }],
-    howToUse: 'Enter ad spend and clicks.', formula: 'CPC = Cost / Clicks', example: '5000 cost / 250 clicks = 20 CPC.', whenToUse: 'Compare ad platform efficiency.'
+    howToUse: 'Enter your total ad spend and the number of clicks received.',
+    formula: 'CPC = Total Ad Cost / Total Clicks',
+    example: 'Spending Rs. 5,000 for 250 clicks means you pay Rs. 20 per click.',
+    whenToUse: 'Monitor CPC to compare ad platform efficiency.'
   },
   { 
-    slug: 'cpa', title: 'CPA Calculator', description: 'Calculate Cost Per Acquisition.', icon: '👥', 
-    fields: [{ id: 'totalCost', label: 'Total Ad Cost', placeholder: '10000' }, { id: 'conversions', label: 'Conversions', placeholder: '50' }],
-    howToUse: 'Enter ad spend and conversions.', formula: 'CPA = Cost / Conversions', example: '10000 cost / 50 sales = 200 CPA.', whenToUse: 'Measure campaign effectiveness.'
+    slug: 'cpa', title: 'CPA Calculator', description: 'Calculate Cost Per Acquisition to measure campaign effectiveness.', icon: '👥', 
+    fields: [{ id: 'totalCost', label: 'Total Ad Cost', placeholder: '10000' }, { id: 'conversions', label: 'Total Conversions', placeholder: '50' }],
+    howToUse: 'Enter total ad spend and the number of conversions.',
+    formula: 'CPA = Total Ad Cost / Total Conversions',
+    example: 'Spending Rs. 10,000 to get 50 sales means each customer costs Rs. 200 to acquire.',
+    whenToUse: 'Critical for understanding if your ad spend is sustainable.'
   },
   { 
-    slug: 'revenue', title: 'Revenue Calculator', description: 'Project your total revenue.', icon: '💰', 
+    slug: 'revenue', title: 'Revenue Calculator', description: 'Project your total revenue based on units sold and average price.', icon: '💰', 
     fields: [{ id: 'unitsSold', label: 'Units Sold', placeholder: '100' }, { id: 'pricePerUnit', label: 'Price per Unit', placeholder: '2000' }],
-    howToUse: 'Enter units sold and price.', formula: 'Revenue = Units × Price', example: '100 units × 2000 = 200,000.', whenToUse: 'Sales forecasting.'
+    howToUse: 'Enter the number of units sold and the average selling price per unit.',
+    formula: 'Revenue = Units Sold × Price per Unit',
+    example: 'Selling 100 units at Rs. 2,000 each generates Rs. 200,000 in revenue.',
+    whenToUse: 'Use for sales forecasting or monthly revenue tracking.'
   },
   { 
-    slug: 'monthly-profit', title: 'Monthly Profit', description: 'Calculate monthly profit.', icon: '', 
+    slug: 'monthly-profit', title: 'Monthly Profit Calculator', description: 'Calculate your monthly profit after all recurring expenses.', icon: '📅', 
     fields: [{ id: 'monthlyRevenue', label: 'Monthly Revenue', placeholder: '300000' }, { id: 'monthlyExpenses', label: 'Monthly Expenses', placeholder: '200000' }],
-    howToUse: 'Enter monthly revenue and expenses.', formula: 'Profit = Revenue - Expenses', example: '300k - 200k = 100k profit.', whenToUse: 'Track monthly business health.'
+    howToUse: 'Enter your total monthly revenue and all monthly expenses combined.',
+    formula: 'Monthly Profit = Monthly Revenue - Monthly Expenses',
+    example: 'Rs. 300,000 revenue minus Rs. 200,000 expenses equals Rs. 100,000 profit.',
+    whenToUse: 'Review monthly to track business health.'
   },
   { 
-    slug: 'yearly-profit', title: 'Yearly Profit', description: 'Project annual profit.', icon: '', 
+    slug: 'yearly-profit', title: 'Yearly Profit Calculator', description: 'Project your annual profit and growth.', icon: '📆', 
     fields: [{ id: 'yearlyRevenue', label: 'Yearly Revenue', placeholder: '3600000' }, { id: 'yearlyExpenses', label: 'Yearly Expenses', placeholder: '2400000' }],
-    howToUse: 'Enter yearly revenue and expenses.', formula: 'Profit = Revenue - Expenses', example: '3.6M - 2.4M = 1.2M profit.', whenToUse: 'Annual reviews and tax planning.'
+    howToUse: 'Enter your total annual revenue and all yearly expenses.',
+    formula: 'Yearly Profit = Yearly Revenue - Yearly Expenses',
+    example: 'Rs. 3.6M yearly revenue minus Rs. 2.4M expenses equals Rs. 1.2M annual profit.',
+    whenToUse: 'Use for tax planning and annual reviews.'
   },
   { 
-    slug: 'currency', title: 'Currency Converter', description: 'Convert between currencies.', icon: '💱', 
+    slug: 'currency', title: 'Currency Converter', description: 'Convert between PKR, USD, EUR, and other currencies.', icon: '💱', 
     fields: [{ id: 'amount', label: 'Amount', placeholder: '1000' }, { id: 'exchangeRate', label: 'Exchange Rate', placeholder: '278' }],
-    howToUse: 'Enter amount and exchange rate.', formula: 'Converted = Amount × Rate', example: '1000 USD × 278 = 278,000 PKR.', whenToUse: 'International pricing.'
+    howToUse: 'Enter the amount and current exchange rate.',
+    formula: 'Converted Amount = Amount × Exchange Rate',
+    example: 'Rs. 1,000 at 278 PKR/USD rate equals approximately $3.60 USD.',
+    whenToUse: 'Essential for international sellers or import/export businesses.'
   },
   { 
-    slug: 'commission', title: 'Commission Calculator', description: 'Calculate platform commissions.', icon: '', 
-    fields: [{ id: 'saleAmount', label: 'Sale Amount', placeholder: '5000' }, { id: 'commissionRate', label: 'Commission (%)', placeholder: '5' }],
-    howToUse: 'Enter sale amount and commission rate.', formula: 'Commission = Amount × (Rate / 100)', example: '5000 sale at 5% = 250 fee.', whenToUse: 'Compare platform fees.'
+    slug: 'commission', title: 'Commission Calculator', description: 'Calculate platform commissions (Daraz, Shopify, Amazon, etc.).', icon: '📊', 
+    fields: [{ id: 'saleAmount', label: 'Sale Amount', placeholder: '5000' }, { id: 'commissionRate', label: 'Commission Rate (%)', placeholder: '5' }],
+    howToUse: 'Enter the sale amount and the platform\'s commission percentage.',
+    formula: 'Commission = Sale Amount × (Commission % / 100)',
+    example: 'A Rs. 5,000 sale with 5% Daraz commission costs Rs. 250, you keep Rs. 4,750.',
+    whenToUse: 'Compare platform fees before choosing where to sell.'
   },
   { 
-    slug: 'bundle', title: 'Bundle Pricing', description: 'Calculate bundle prices.', icon: '🎁', 
-    fields: [{ id: 'product1Cost', label: 'Product 1 Cost', placeholder: '500' }, { id: 'product2Cost', label: 'Product 2 Cost', placeholder: '300' }, { id: 'bundlePrice', label: 'Bundle Price', placeholder: '1200' }],
-    howToUse: 'Enter individual costs and bundle price.', formula: 'Profit = Bundle Price - Total Cost', example: 'Cost 800, Price 1200 = 400 profit.', whenToUse: 'Create product bundles.'
+    slug: 'bundle', title: 'Bundle Pricing Calculator', description: 'Calculate profitable bundle prices for product combinations.', icon: '🎁', 
+    fields: [{ id: 'product1Cost', label: 'Product 1 Cost', placeholder: '500' }, { id: 'product2Cost', label: 'Product 2 Cost', placeholder: '300' }, { id: 'bundlePrice', label: 'Bundle Selling Price', placeholder: '1200' }],
+    howToUse: 'Enter individual product costs and your proposed bundle selling price.',
+    formula: 'Bundle Profit = Bundle Price - (Product 1 Cost + Product 2 Cost)',
+    example: 'Products costing Rs. 500 + Rs. 300 = Rs. 800. Selling bundle at Rs. 1,200 gives Rs. 400 profit.',
+    whenToUse: 'Create attractive bundles that increase average order value.'
   },
   { 
-    slug: 'markup', title: 'Markup Calculator', description: 'Calculate markup percentage.', icon: '🏷️', 
+    slug: 'markup', title: 'Markup Calculator', description: 'Calculate the markup percentage needed to achieve your target profit.', icon: '🏷️', 
     fields: [{ id: 'cost', label: 'Product Cost', placeholder: '800' }, { id: 'sellingPrice', label: 'Selling Price', placeholder: '1200' }],
-    howToUse: 'Enter cost and selling price.', formula: 'Markup = ((Price - Cost) / Cost) × 100', example: 'Cost 800, Price 1200 = 50% markup.', whenToUse: 'Sourcing products.'
+    howToUse: 'Enter your product cost and desired selling price.',
+    formula: 'Markup = ((Selling Price - Cost) / Cost) × 100',
+    example: 'Cost of Rs. 800 selling at Rs. 1,200 is a 50% markup.',
+    whenToUse: 'Use when sourcing products to ensure you\'re marking up enough.'
   },
   { 
-    slug: 'returns', title: 'Returns Calculator', description: 'Calculate impact of returns.', icon: '🔄', 
-    fields: [{ id: 'totalOrders', label: 'Total Orders', placeholder: '100' }, { id: 'returnRate', label: 'Return Rate (%)', placeholder: '10' }, { id: 'orderValue', label: 'Avg Order Value', placeholder: '2000' }],
-    howToUse: 'Enter orders, return rate, and order value.', formula: 'Loss = (Orders × Return%) × Value', example: '100 orders, 10% returns, 2000 value = 20k loss.', whenToUse: 'Factor returns into pricing.'
+    slug: 'returns', title: 'Returns Calculator', description: 'Calculate the impact of product returns on your profit.', icon: '🔄', 
+    fields: [{ id: 'totalOrders', label: 'Total Orders', placeholder: '100' }, { id: 'returnRate', label: 'Return Rate (%)', placeholder: '10' }, { id: 'orderValue', label: 'Average Order Value', placeholder: '2000' }],
+    howToUse: 'Enter total orders, expected return rate, and average order value.',
+    formula: 'Loss = (Total Orders × Return Rate %) × Average Order Value',
+    example: '100 orders at Rs. 2,000 each with 10% returns means 10 returns costing Rs. 20,000.',
+    whenToUse: 'Factor returns into pricing. High return categories need higher margins.'
   },
   { 
-    slug: 'cpm', title: 'CPM Calculator', description: 'Calculate Cost Per Mille.', icon: '📢', 
-    fields: [{ id: 'totalCost', label: 'Total Ad Cost', placeholder: '5000' }, { id: 'impressions', label: 'Impressions', placeholder: '100000' }],
-    howToUse: 'Enter ad spend and impressions.', formula: 'CPM = (Cost / Impressions) × 1000', example: '5000 cost / 100k impressions = 50 CPM.', whenToUse: 'Brand awareness campaigns.'
+    slug: 'cpm', title: 'CPM Calculator', description: 'Calculate Cost Per Mille (thousand impressions) for brand awareness.', icon: '📢', 
+    fields: [{ id: 'totalCost', label: 'Total Ad Cost', placeholder: '5000' }, { id: 'impressions', label: 'Total Impressions', placeholder: '100000' }],
+    howToUse: 'Enter total ad spend and total impressions delivered.',
+    formula: 'CPM = (Total Cost / Impressions) × 1000',
+    example: 'Rs. 5,000 for 100,000 impressions equals Rs. 50 CPM.',
+    whenToUse: 'Compare brand awareness campaign efficiency across platforms.'
   },
-  // --- SIMPLIFIED PERCENTAGE CALCULATOR ---
   { 
-    slug: 'percentage', 
-    title: 'Percentage Calculator', 
-    description: 'Find what percentage one amount is of a total.', 
-    icon: '📊', 
+    slug: 'percentage', title: 'Percentage Calculator', description: 'Find what percentage one amount is of a total.', icon: '📊', 
     fields: [
       { id: 'amount', label: 'Amount (Part)', placeholder: '165' },
       { id: 'total', label: 'Total Amount', placeholder: '5000' }
@@ -127,22 +184,13 @@ export default function CalculatorPage({ params }: { params: Promise<{ slug: str
   const calc = CALCULATORS.find(c => c.slug === resolvedParams.slug);
   const [inputs, setInputs] = useState<Record<string, string>>({});
 
-  if (!calc) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-4">404</h1>
-          <p className="text-slate-600">Calculator not found</p>
-          <Link href="/" className="text-indigo-600 hover:underline mt-4 inline-block">← Back to Home</Link>
-        </div>
-      </div>
-    );
-  }
+  if (!calc) notFound();
 
   const handleChange = (id: string, val: string) => {
     setInputs(prev => ({ ...prev, [id]: val }));
   };
 
+  // --- CALCULATION LOGIC ---
   let res1 = 0, res2 = 0, label1 = 'Result', label2 = '';
   const s = calc.slug;
 
@@ -166,7 +214,6 @@ export default function CalculatorPage({ params }: { params: Promise<{ slug: str
   else if (s === 'markup') { const c = Number(inputs.cost) || 0; const p = Number(inputs.sellingPrice) || 0; res1 = p - c; res2 = c > 0 ? ((p - c) / c) * 100 : 0; label1 = 'Profit'; label2 = 'Markup'; } 
   else if (s === 'returns') { const o = Number(inputs.totalOrders) || 0; const r = Number(inputs.returnRate) || 0; const v = Number(inputs.orderValue) || 0; const ret = o * (r / 100); res1 = ret * v; res2 = ret; label1 = 'Loss'; label2 = 'Returns'; } 
   else if (s === 'cpm') { const c = Number(inputs.totalCost) || 0; const imp = Number(inputs.impressions) || 0; res1 = imp > 0 ? (c / imp) * 1000 : 0; res2 = imp; label1 = 'CPM'; label2 = 'Impressions'; }
-  // --- SIMPLIFIED PERCENTAGE LOGIC ---
   else if (s === 'percentage') { 
     const amount = Number(inputs.amount) || 0; 
     const total = Number(inputs.total) || 0;
@@ -182,90 +229,122 @@ export default function CalculatorPage({ params }: { params: Promise<{ slug: str
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
-      <nav className="glass sticky top-0 z-50 border-b border-slate-200">
+      <nav className="glass sticky top-0 z-50 border-b border-slate-200/60">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">EC</div>
-            <span className="font-bold text-lg">E-commerce Calculator</span>
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-indigo-500/20 group-hover:shadow-indigo-500/40 transition">EC</div>
+            <span className="font-bold text-lg text-slate-900">E-commerce Calculator</span>
           </Link>
-          <div className="hidden md:flex gap-6 text-sm text-slate-600">
-            <Link href="/calculators" className="hover:text-indigo-600 transition">All Calculators</Link>
-            <Link href="/#blog" className="hover:text-indigo-600 transition">Blog</Link>
-            <Link href="/#about" className="hover:text-indigo-600 transition">About</Link>
-          </div>
-          <Link href="/" className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-800 transition">Home</Link>
+          <Link href="/" className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-indigo-600 bg-white border border-slate-200 px-4 py-2 rounded-lg hover:border-indigo-300 transition shadow-sm">
+            <span>←</span> Back to Home
+          </Link>
         </div>
       </nav>
 
-      <div className="max-w-5xl mx-auto px-6 py-12">
+      <div className="max-w-5xl mx-auto px-6 py-12 md:py-16">
         <div className="text-center mb-10">
-          <div className="text-5xl mb-4">{calc.icon}</div>
-          <h1 className="text-4xl font-bold mb-3">{calc.title}</h1>
-          <p className="text-slate-600 text-lg">{calc.description}</p>
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 text-3xl mb-6 shadow-sm">
+            {calc.icon}
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-slate-900 mb-4">
+            {calc.title}
+          </h1>
+          <p className="text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
+            {calc.description}
+          </p>
         </div>
 
-        <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 mb-8">
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="space-y-4">
-              <h3 className="font-bold text-lg mb-4">Enter Values</h3>
+        <div className="bg-white rounded-3xl shadow-2xl shadow-indigo-500/5 border border-slate-200 overflow-hidden glow">
+          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-6 text-white flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold">Enter Your Numbers</h2>
+              <p className="text-indigo-100 text-sm mt-1">Results update instantly as you type</p>
+            </div>
+            <div className="hidden md:flex items-center gap-2 bg-white/20 px-3 py-1.5 rounded-full text-xs font-medium backdrop-blur-sm">
+              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+              Live Calculation
+            </div>
+          </div>
+
+          <div className="p-8 md:p-10 grid lg:grid-cols-2 gap-10">
+            <div className="space-y-5">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Your Inputs</h3>
               {calc.fields.map(field => (
-                <div key={field.id}>
-                  <label className="text-sm font-medium mb-1 block">{field.label}</label>
-                  <input 
-                    type="number" 
-                    value={inputs[field.id] || ''} 
-                    onChange={e => handleChange(field.id, e.target.value)}
-                    placeholder={field.placeholder}
-                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none" 
-                  />
+                <div key={field.id} className="group">
+                  <label className="text-sm font-semibold text-slate-700 mb-2 block flex items-center gap-2">
+                    {field.label}
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium group-focus-within:text-indigo-500 transition">Rs</span>
+                    <input 
+                      type="number" 
+                      value={inputs[field.id] || ''} 
+                      onChange={e => handleChange(field.id, e.target.value)}
+                      placeholder={field.placeholder}
+                      className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium placeholder:text-slate-400 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all duration-200" 
+                    />
+                  </div>
                 </div>
               ))}
             </div>
 
-            <div className="bg-slate-900 rounded-2xl p-6 text-white">
-              <h3 className="font-bold text-lg mb-4">Results</h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center pb-4 border-b border-white/10">
-                  <span className="text-slate-400">{label1}</span>
-                  <span className={`text-3xl font-bold ${res1 >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {s === 'percentage' ? `${formatResult(res1)}%` : 
-                     ['break-even', 'cpc', 'cpa', 'revenue', 'monthly-profit', 'yearly-profit', 'currency', 'commission', 'bundle', 'markup', 'returns', 'cpm', 'discount', 'shipping', 'cod', 'tax', 'roas'].includes(s) ? '' : 'Rs. '}{formatResult(res1)}
-                  </span>
-                </div>
-                {label2 && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400">{label2}</span>
-                    <span className="text-2xl font-bold text-indigo-300">
-                      {formatResult(res2)}
-                    </span>
+            <div className="relative">
+              <div className="sticky top-24">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Live Results</h3>
+                <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950 rounded-2xl p-8 text-white shadow-2xl shadow-indigo-900/20 border border-white/10">
+                  <div className="space-y-6">
+                    <div className="flex flex-col items-end pb-6 border-b border-white/10">
+                      <span className="text-slate-400 text-sm font-medium mb-1 self-start">{label1}</span>
+                      <span className={`text-4xl md:text-5xl font-bold tracking-tight ${res1 >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {s === 'percentage' ? `${formatResult(res1)}%` : 
+                         ['break-even', 'cpc', 'cpa', 'revenue', 'monthly-profit', 'yearly-profit', 'currency', 'commission', 'bundle', 'markup', 'returns', 'cpm', 'discount', 'shipping', 'cod', 'tax', 'roas'].includes(s) ? '' : 'Rs. '}{formatResult(res1)}
+                      </span>
+                    </div>
+                    {label2 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-400 text-sm font-medium">{label2}</span>
+                        <span className="text-2xl font-bold text-indigo-300">
+                          {s === 'break-even' ? 'Rs. ' : ''}{formatResult(res2)}
+                          {(label2.includes('Percentage') || label2.includes('ROI') || label2.includes('Margin')) && '%'}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                )}
+                  <div className="mt-8 p-4 bg-white/5 rounded-xl border border-white/10 backdrop-blur-sm">
+                    <p className="text-xs text-slate-300 text-center leading-relaxed">
+                      💡 <strong className="text-white">Pro Tip:</strong> Adjust the numbers above to see how changes affect your {label1.toLowerCase()}.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="space-y-6">
+        {/* Detailed Information Sections */}
+        <div className="space-y-6 mt-12">
           <div className="bg-white rounded-2xl p-6 border border-slate-200">
-            <h3 className="text-xl font-bold mb-3">How to Use</h3>
+            <h3 className="text-xl font-bold mb-3 flex items-center gap-2">📖 How to Use</h3>
             <p className="text-slate-600 leading-relaxed">{calc.howToUse}</p>
           </div>
           <div className="bg-indigo-50 rounded-2xl p-6 border border-indigo-100">
-            <h3 className="text-xl font-bold mb-3 text-indigo-900">🧮 Formula</h3>
-            <div className="bg-white rounded-lg p-4 font-mono text-sm text-indigo-800">{calc.formula}</div>
+            <h3 className="text-xl font-bold mb-3 flex items-center gap-2 text-indigo-900">🧮 Formula</h3>
+            <div className="bg-white rounded-lg p-4 font-mono text-sm text-indigo-800 whitespace-pre-line">{calc.formula}</div>
           </div>
           <div className="bg-green-50 rounded-2xl p-6 border border-green-100">
-            <h3 className="text-xl font-bold mb-3 text-green-900">💡 Example</h3>
+            <h3 className="text-xl font-bold mb-3 flex items-center gap-2 text-green-900">💡 Example</h3>
             <p className="text-green-800 leading-relaxed">{calc.example}</p>
           </div>
           <div className="bg-amber-50 rounded-2xl p-6 border border-amber-100">
-            <h3 className="text-xl font-bold mb-3 text-amber-900">When to Use</h3>
+            <h3 className="text-xl font-bold mb-3 flex items-center gap-2 text-amber-900">🎯 When to Use</h3>
             <p className="text-amber-800 leading-relaxed">{calc.whenToUse}</p>
           </div>
         </div>
 
-        <div className="mt-8 text-center">
-          <Link href="/calculators" className="text-indigo-600 hover:text-indigo-700 font-medium hover:underline">← Back to All Calculators</Link>
+        <div className="mt-12 text-center">
+          <Link href="/calculators" className="text-indigo-600 hover:text-indigo-700 font-medium hover:underline text-lg">
+            ← Back to All Calculators
+          </Link>
         </div>
       </div>
     </main>
