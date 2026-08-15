@@ -167,7 +167,9 @@ export default function Home() {
           ))}
         </div>
         <div className="text-center">
-          <button className="border-2 border-slate-200 px-8 py-3 rounded-xl font-semibold hover:border-indigo-500 hover:text-indigo-600 transition bg-white">View All 50+ Calculators →</button>
+          <Link href="/calculators" className="inline-block bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:shadow-xl hover:scale-105 transition-all duration-300">
+  View All 50+ Calculators →
+</Link>
         </div>
       </section>
 
