@@ -92,7 +92,7 @@ export default function Home() {
           </Link>
           <div className="hidden md:flex gap-6 text-sm text-slate-600">
             <a href="#calc" className="hover:text-indigo-600 transition">Calculators</a>
-            <Link href="/blog" className="hover:text-indigo-600 transition">Blog</Link>
+            
             <a href="#about" className="hover:text-indigo-600 transition">About</a>
           </div>
         </div>
