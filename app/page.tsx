@@ -211,43 +211,53 @@ export default function Home() {
       <FAQ />
 
       <footer className="bg-slate-900 text-slate-400 py-12 border-t border-slate-800">
-        <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-4 gap-8 mb-8">
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs">EC</div>
-              <span className="font-bold text-white text-lg">E-commerce Calculator</span>
-            </div>
-            <p className="text-sm">Pakistan's Ultimate FREE Seller Toolkit. Calculate real profits, make smarter decisions.</p>
-          </div>
-          <div>
-            <h4 className="font-bold text-white mb-4">Product</h4>
-            <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-white transition">All Calculators</a></li>
-              <li><a href="#" className="hover:text-white transition">Profit Calculator</a></li>
-              <li><a href="#" className="hover:text-white transition">ROI Calculator</a></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-bold text-white mb-4">Resources</h4>
-            <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-white transition">Blog</a></li>
-              <li><a href="#" className="hover:text-white transition">Guides</a></li>
-              <li><a href="#" className="hover:text-white transition">FAQ</a></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-bold text-white mb-4">Legal</h4>
-            <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-white transition">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-white transition">Terms of Service</a></li>
-              <li><a href="#" className="hover:text-white transition">Contact Us</a></li>
-            </ul>
-          </div>
+  <div className="max-w-6xl mx-auto px-6">
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+      {/* Brand */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">EC</div>
+          <span className="font-bold text-lg text-white">E-commerce Calculator</span>
         </div>
-        <div className="max-w-6xl mx-auto px-6 border-t border-slate-800 pt-8 text-center text-sm">
-          © 2026 E-commerce Calculator. All rights reserved. 100% Free Forever.
-        </div>
-      </footer>
+        <p className="text-sm">Pakistan's Ultimate FREE Seller Toolkit. Calculate real profits, make smarter decisions.</p>
+      </div>
+
+      {/* Product Links */}
+      <div>
+        <h3 className="font-bold text-white mb-3">Product</h3>
+        <ul className="space-y-2 text-sm">
+          <li><Link href="/calculators" className="hover:text-white transition">All Calculators</Link></li>
+          <li><Link href="/calculators/profit" className="hover:text-white transition">Profit Calculator</Link></li>
+          <li><Link href="/calculators/roi" className="hover:text-white transition">ROI Calculator</Link></li>
+        </ul>
+      </div>
+
+      {/* Resources Links */}
+      <div>
+        <h3 className="font-bold text-white mb-3">Resources</h3>
+        <ul className="space-y-2 text-sm">
+          <li><Link href="/blog" className="hover:text-white transition">Blog</Link></li>
+          <li><Link href="/guides" className="hover:text-white transition">Guides</Link></li>
+          <li><Link href="/faq" className="hover:text-white transition">FAQ</Link></li>
+        </ul>
+      </div>
+
+      {/* Legal Links */}
+      <div>
+        <h3 className="font-bold text-white mb-3">Legal</h3>
+        <ul className="space-y-2 text-sm">
+          <li><Link href="/privacy" className="hover:text-white transition">Privacy Policy</Link></li>
+          <li><Link href="/terms" className="hover:text-white transition">Terms of Service</Link></li>
+          <li><Link href="/contact" className="hover:text-white transition">Contact Us</Link></li>
+        </ul>
+      </div>
+    </div>
+
+    <div className="border-t border-slate-800 pt-8 text-center text-sm">
+      <p>© 2026 E-commerce Calculator. All rights reserved. 100% Free Forever.</p>
+    </div>
+  </div>
+</footer>
     </main>
   );
 }
