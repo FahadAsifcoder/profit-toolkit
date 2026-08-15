@@ -172,7 +172,7 @@ export default function Home() {
       </section>
 
             {/* BLOG SECTION - NOW CONNECTED TO ADMIN PANEL */}
-      <section id="blog" className="bg-white py-16 border-t border-slate-200">
+      {/* <section id="blog" className="bg-white py-16 border-t border-slate-200">
         <div className="max-w-6xl mx-auto px-6">
           <h2 className="text-3xl font-bold text-center mb-10">From the Blog</h2>
           
@@ -197,7 +197,7 @@ export default function Home() {
             </div>
           )}
         </div>
-      </section>
+      </section> */}
       
       <Features />
 
