@@ -1,3 +1,4 @@
+import ScrollFix from '@/components/ScrollFix';
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
@@ -9,14 +10,18 @@ export const metadata: Metadata = {
   description: 'Calculate your REAL profit after every expense. 50+ free calculators for e-commerce sellers.',
 }
 
+
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className="antialiased">
+        <ScrollFix />
+        {children}
+      </body>
     </html>
-  )
+  );
 }

@@ -1,8 +1,24 @@
 'use client';
 
-import { useState, use } from 'react';
+import { useState, use, useEffect } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+
+// --- SUPPORTED CURRENCIES ---
+const CURRENCIES = [
+  { code: 'PKR', name: 'Pakistani Rupee' },
+  { code: 'USD', name: 'US Dollar' },
+  { code: 'EUR', name: 'Euro' },
+  { code: 'GBP', name: 'British Pound' },
+  { code: 'AED', name: 'UAE Dirham' },
+  { code: 'SAR', name: 'Saudi Riyal' },
+  { code: 'INR', name: 'Indian Rupee' },
+  { code: 'CNY', name: 'Chinese Yuan' },
+  { code: 'TRY', name: 'Turkish Lira' },
+  { code: 'CAD', name: 'Canadian Dollar' },
+  { code: 'AUD', name: 'Australian Dollar' },
+  { code: 'JPY', name: 'Japanese Yen' },
+];
 
 // --- ALL CALCULATOR DATA WITH DETAILED INFO ---
 const CALCULATORS = [
@@ -64,11 +80,11 @@ const CALCULATORS = [
   },
   { 
     slug: 'cod', title: 'COD Charges Calculator', description: 'Calculate Cash on Delivery fees charged by courier companies.', icon: '💳', 
-    fields: [{ id: 'orderValue', label: 'Order Value', placeholder: '5000' }, { id: 'codPercent', label: 'COD Fee Percentage (%)', placeholder: '2' }],
-    howToUse: 'Enter the order value and the COD fee percentage charged by your courier.',
-    formula: 'COD Fee = Order Value × (COD % / 100)',
-    example: 'A Rs. 5,000 order with 2% COD fee costs Rs. 100 in extra charges.',
-    whenToUse: 'Factor this into your pricing if you offer COD.'
+    fields: [{ id: 'orderValue', label: 'Order Value', placeholder: '5000' }, { id: 'codFee', label: 'COD Fee (Rs)', placeholder: '100' }],
+    howToUse: 'Enter the order value and the COD fee in rupees charged by your courier.',
+    formula: 'You Receive = Order Value - COD Fee',
+    example: 'A Rs. 5,000 order with Rs. 100 COD fee means you receive Rs. 4,900.',
+    whenToUse: 'Factor this into your pricing if you offer COD, as it reduces your profit margin.'
   },
   { 
     slug: 'tax', title: 'Tax Calculator', description: 'Calculate sales tax, VAT, or GST on your products.', icon: '💵', 
@@ -119,12 +135,12 @@ const CALCULATORS = [
     whenToUse: 'Use for tax planning and annual reviews.'
   },
   { 
-    slug: 'currency', title: 'Currency Converter', description: 'Convert between PKR, USD, EUR, and other currencies.', icon: '💱', 
-    fields: [{ id: 'amount', label: 'Amount', placeholder: '1000' }, { id: 'exchangeRate', label: 'Exchange Rate', placeholder: '278' }],
-    howToUse: 'Enter the amount and current exchange rate.',
-    formula: 'Converted Amount = Amount × Exchange Rate',
-    example: 'Rs. 1,000 at 278 PKR/USD rate equals approximately $3.60 USD.',
-    whenToUse: 'Essential for international sellers or import/export businesses.'
+    slug: 'currency', title: 'Currency Converter', description: 'Convert between PKR, USD, EUR, and 10+ currencies with live exchange rates.', icon: '💱', 
+    fields: [{ id: 'amount', label: 'Amount', placeholder: '1000' }],
+    howToUse: 'Enter an amount, choose the From and To currencies, and the conversion is calculated automatically using live exchange rates. Use the swap button to reverse the conversion.',
+    formula: 'Converted Amount = Amount × (Rate of To ÷ Rate of From)',
+    example: 'Converting 100 USD to PKR at a live rate of 278 gives 27,800 PKR.',
+    whenToUse: 'Essential for international sellers, import/export businesses, or pricing in multiple currencies.'
   },
   { 
     slug: 'commission', title: 'Commission Calculator', description: 'Calculate platform commissions (Daraz, Shopify, Amazon, etc.).', icon: '📊', 
@@ -168,10 +184,7 @@ const CALCULATORS = [
   },
   { 
     slug: 'percentage', title: 'Percentage Calculator', description: 'Find what percentage one amount is of a total.', icon: '📊', 
-    fields: [
-      { id: 'amount', label: 'Amount (Part)', placeholder: '165' },
-      { id: 'total', label: 'Total Amount', placeholder: '5000' }
-    ],
+    fields: [{ id: 'amount', label: 'Amount (Part)', placeholder: '165' }, { id: 'total', label: 'Total Amount', placeholder: '5000' }],
     howToUse: 'Enter the part amount and the total amount to find the percentage.',
     formula: 'Percentage = (Amount / Total) × 100',
     example: '165 is 3.3% of 5000.',
@@ -182,7 +195,27 @@ const CALCULATORS = [
 export default function CalculatorPage({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = use(params);
   const calc = CALCULATORS.find(c => c.slug === resolvedParams.slug);
+  const s = calc?.slug ?? '';
+
   const [inputs, setInputs] = useState<Record<string, string>>({});
+  const [fromCur, setFromCur] = useState('USD');
+  const [toCur, setToCur] = useState('PKR');
+  const [rates, setRates] = useState<Record<string, number> | null>(null);
+  const [rateStatus, setRateStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [manualRate, setManualRate] = useState('');
+
+  // Fetch LIVE exchange rates automatically
+  useEffect(() => {
+    if (s !== 'currency') return;
+    setRateStatus('loading');
+    fetch('https://open.er-api.com/v6/latest/USD')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data && data.rates) { setRates(data.rates); setRateStatus('ready'); }
+        else setRateStatus('error');
+      })
+      .catch(() => setRateStatus('error'));
+  }, [s]);
 
   if (!calc) notFound();
 
@@ -192,7 +225,6 @@ export default function CalculatorPage({ params }: { params: Promise<{ slug: str
 
   // --- CALCULATION LOGIC ---
   let res1 = 0, res2 = 0, label1 = 'Result', label2 = '';
-  const s = calc.slug;
 
   if (s === 'profit') { const rev = Number(inputs.revenue) || 0; const costs = (Number(inputs.productCost) || 0) + (Number(inputs.ads) || 0) + (Number(inputs.shipping) || 0); const fees = rev * ((Number(inputs.fees) || 0) / 100); res1 = rev - (costs + fees); res2 = rev > 0 ? (res1 / rev) * 100 : 0; label1 = 'Net Profit'; label2 = 'Margin'; } 
   else if (s === 'roi') { const inv = Number(inputs.investment) || 0; const ret = Number(inputs.return) || 0; res1 = ret - inv; res2 = inv > 0 ? ((ret - inv) / inv) * 100 : 0; label1 = 'Net Gain'; label2 = 'ROI'; } 
@@ -201,14 +233,23 @@ export default function CalculatorPage({ params }: { params: Promise<{ slug: str
   else if (s === 'break-even') { const fixed = Number(inputs.fixedCosts) || 0; const price = Number(inputs.pricePerUnit) || 0; const cost = Number(inputs.costPerUnit) || 0; const contrib = price - cost; res1 = contrib > 0 ? fixed / contrib : 0; res2 = res1 * price; label1 = 'Units'; label2 = 'Revenue'; } 
   else if (s === 'discount') { const orig = Number(inputs.originalPrice) || 0; const disc = Number(inputs.discountPercent) || 0; res1 = orig * (disc / 100); res2 = orig - res1; label1 = 'Discount'; label2 = 'Final Price'; } 
   else if (s === 'shipping') { const w = Number(inputs.weight) || 0; const r = Number(inputs.ratePerKg) || 0; const p = Number(inputs.packaging) || 0; res1 = (w * r) + p; res2 = w * r; label1 = 'Total Cost'; label2 = 'Base Cost'; } 
-  else if (s === 'cod') { const val = Number(inputs.orderValue) || 0; const p = Number(inputs.codPercent) || 0; res1 = val * (p / 100); res2 = val - res1; label1 = 'COD Fee'; label2 = 'After Fee'; } 
+  else if (s === 'cod') { const val = Number(inputs.orderValue) || 0; const fee = Number(inputs.codFee) || 0; res1 = fee; res2 = val - fee; label1 = 'COD Fee'; label2 = 'You Receive'; } 
   else if (s === 'tax') { const amt = Number(inputs.amount) || 0; const r = Number(inputs.taxRate) || 0; res1 = amt * (r / 100); res2 = amt + res1; label1 = 'Tax'; label2 = 'Total'; } 
   else if (s === 'cpc') { const c = Number(inputs.totalCost) || 0; const cl = Number(inputs.clicks) || 0; res1 = cl > 0 ? c / cl : 0; res2 = c; label1 = 'CPC'; label2 = 'Total Cost'; } 
   else if (s === 'cpa') { const c = Number(inputs.totalCost) || 0; const conv = Number(inputs.conversions) || 0; res1 = conv > 0 ? c / conv : 0; res2 = conv; label1 = 'CPA'; label2 = 'Conversions'; } 
   else if (s === 'revenue') { const u = Number(inputs.unitsSold) || 0; const p = Number(inputs.pricePerUnit) || 0; res1 = u * p; res2 = u; label1 = 'Revenue'; label2 = 'Units'; } 
   else if (s === 'monthly-profit') { const rev = Number(inputs.monthlyRevenue) || 0; const exp = Number(inputs.monthlyExpenses) || 0; res1 = rev - exp; res2 = rev > 0 ? (res1 / rev) * 100 : 0; label1 = 'Profit'; label2 = 'Margin'; } 
   else if (s === 'yearly-profit') { const rev = Number(inputs.yearlyRevenue) || 0; const exp = Number(inputs.yearlyExpenses) || 0; res1 = rev - exp; res2 = rev > 0 ? (res1 / rev) * 100 : 0; label1 = 'Profit'; label2 = 'Margin'; } 
-  else if (s === 'currency') { const amt = Number(inputs.amount) || 0; const r = Number(inputs.exchangeRate) || 0; res1 = amt * r; res2 = r; label1 = 'Converted'; label2 = 'Rate'; } 
+  else if (s === 'currency') {
+    const amt = Number(inputs.amount) || 0;
+    const fromRate = rates && rates[fromCur] ? rates[fromCur] : 0;
+    const toRate = rates && rates[toCur] ? rates[toCur] : 0;
+    const liveRate = rateStatus === 'ready' && fromRate > 0 ? toRate / fromRate : (Number(manualRate) || 0);
+    res1 = amt * liveRate;
+    res2 = liveRate;
+    label1 = `Converted (${toCur})`;
+    label2 = `1 ${fromCur} =`;
+  }
   else if (s === 'commission') { const amt = Number(inputs.saleAmount) || 0; const r = Number(inputs.commissionRate) || 0; res1 = amt * (r / 100); res2 = amt - res1; label1 = 'Fee'; label2 = 'After Fee'; } 
   else if (s === 'bundle') { const c1 = Number(inputs.product1Cost) || 0; const c2 = Number(inputs.product2Cost) || 0; const p = Number(inputs.bundlePrice) || 0; res1 = p - (c1 + c2); res2 = p > 0 ? (res1 / p) * 100 : 0; label1 = 'Profit'; label2 = 'Margin'; } 
   else if (s === 'markup') { const c = Number(inputs.cost) || 0; const p = Number(inputs.sellingPrice) || 0; res1 = p - c; res2 = c > 0 ? ((p - c) / c) * 100 : 0; label1 = 'Profit'; label2 = 'Markup'; } 
@@ -224,8 +265,13 @@ export default function CalculatorPage({ params }: { params: Promise<{ slug: str
   const formatResult = (val: number) => {
     if (s === 'roas' && label2 === 'ROAS') return val.toFixed(2) + 'x';
     if (s === 'break-even') return Math.ceil(val).toLocaleString();
+    if (Math.abs(val) > 0 && Math.abs(val) < 0.01) return val.toLocaleString(undefined, { maximumFractionDigits: 6 });
     return val.toLocaleString(undefined, { maximumFractionDigits: 2 });
   };
+
+  const res1IsRupee = !['percentage', 'break-even', 'currency'].includes(s);
+  const res2IsRupee = ['break-even', 'discount', 'shipping', 'cod', 'tax', 'cpc', 'commission'].includes(s);
+  const res2IsPercent = (label2.includes('Margin') || label2.includes('ROI') || label2.includes('Percentage') || label2 === 'Markup');
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
@@ -269,23 +315,90 @@ export default function CalculatorPage({ params }: { params: Promise<{ slug: str
           <div className="p-8 md:p-10 grid lg:grid-cols-2 gap-10">
             <div className="space-y-5">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Your Inputs</h3>
-              {calc.fields.map(field => (
-                <div key={field.id} className="group">
-                  <label className="text-sm font-semibold text-slate-700 mb-2 block flex items-center gap-2">
-                    {field.label}
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium group-focus-within:text-indigo-500 transition">Rs</span>
-                    <input 
-                      type="number" 
-                      value={inputs[field.id] || ''} 
-                      onChange={e => handleChange(field.id, e.target.value)}
-                      placeholder={field.placeholder}
-                      className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium placeholder:text-slate-400 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all duration-200" 
-                    />
+
+              {s === 'currency' ? (
+                <div className="space-y-5">
+                  <div className="group">
+                    <label className="text-sm font-semibold text-slate-700 mb-2 block">Amount</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium group-focus-within:text-indigo-500 transition">{fromCur}</span>
+                      <input
+                        type="number"
+                        value={inputs.amount || ''}
+                        onChange={e => handleChange('amount', e.target.value)}
+                        placeholder="1000"
+                        className="w-full pl-16 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium placeholder:text-slate-400 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all duration-200"
+                      />
+                    </div>
                   </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-semibold text-slate-700 mb-2 block">From</label>
+                      <select
+                        value={fromCur}
+                        onChange={e => setFromCur(e.target.value)}
+                        className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition"
+                      >
+                        {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.code}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-semibold text-slate-700 mb-2 block">To</label>
+                      <select
+                        value={toCur}
+                        onChange={e => setToCur(e.target.value)}
+                        className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition"
+                      >
+                        {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.code}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => { const t = fromCur; setFromCur(toCur); setToCur(t); }}
+                    className="w-full py-2.5 bg-indigo-50 text-indigo-700 rounded-xl font-semibold hover:bg-indigo-100 transition"
+                  >
+                    ⇄ Swap Currencies
+                  </button>
+
+                  {rateStatus === 'loading' && <p className="text-xs text-slate-500 text-center">⏳ Loading live exchange rates…</p>}
+                  {rateStatus === 'ready' && <p className="text-xs text-green-600 text-center font-medium">🟢 Live rates loaded — conversion is automatic</p>}
+                  {rateStatus === 'error' && (
+                    <div>
+                      <p className="text-xs text-amber-600 text-center mb-2">Live rates unavailable. Enter rate manually:</p>
+                      <input
+                        type="number"
+                        value={manualRate}
+                        onChange={e => setManualRate(e.target.value)}
+                        placeholder={`1 ${fromCur} = ? ${toCur}`}
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium placeholder:text-slate-400 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition"
+                      />
+                    </div>
+                  )}
                 </div>
-              ))}
+              ) : (
+                calc.fields.map(field => (
+                  <div key={field.id} className="group">
+                    <label className="text-sm font-semibold text-slate-700 mb-2 block flex items-center gap-2">
+                      {field.label}
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium group-focus-within:text-indigo-500 transition">
+                        {field.label.includes('%') ? '%' : 'Rs'}
+                      </span>
+                      <input 
+                        type="number" 
+                        value={inputs[field.id] || ''} 
+                        onChange={e => handleChange(field.id, e.target.value)}
+                        placeholder={field.placeholder}
+                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium placeholder:text-slate-400 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all duration-200" 
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
 
             <div className="relative">
@@ -296,16 +409,20 @@ export default function CalculatorPage({ params }: { params: Promise<{ slug: str
                     <div className="flex flex-col items-end pb-6 border-b border-white/10">
                       <span className="text-slate-400 text-sm font-medium mb-1 self-start">{label1}</span>
                       <span className={`text-4xl md:text-5xl font-bold tracking-tight ${res1 >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {s === 'percentage' ? `${formatResult(res1)}%` : 
-                         ['break-even', 'cpc', 'cpa', 'revenue', 'monthly-profit', 'yearly-profit', 'currency', 'commission', 'bundle', 'markup', 'returns', 'cpm', 'discount', 'shipping', 'cod', 'tax', 'roas'].includes(s) ? '' : 'Rs. '}{formatResult(res1)}
+                        {s === 'percentage' ? `${formatResult(res1)}%`
+                         : s === 'currency' ? `${formatResult(res1)} ${toCur}`
+                         : res1IsRupee ? `Rs. ${formatResult(res1)}`
+                         : formatResult(res1)}
                       </span>
                     </div>
                     {label2 && (
                       <div className="flex justify-between items-center">
                         <span className="text-slate-400 text-sm font-medium">{label2}</span>
                         <span className="text-2xl font-bold text-indigo-300">
-                          {s === 'break-even' ? 'Rs. ' : ''}{formatResult(res2)}
-                          {(label2.includes('Percentage') || label2.includes('ROI') || label2.includes('Margin')) && '%'}
+                          {s === 'currency' ? `${formatResult(res2)} ${toCur}`
+                           : res2IsRupee ? `Rs. ${formatResult(res2)}`
+                           : formatResult(res2)}
+                          {res2IsPercent && '%'}
                         </span>
                       </div>
                     )}
